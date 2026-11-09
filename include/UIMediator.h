@@ -237,6 +237,7 @@ namespace SigDigger {
     void setAnalyzerParams(Suscan::AnalyzerParams const &params);
     void setStatusMessage(QString const &);
     void saveUIConfig();
+    void ensureWindowOnScreen();
     void setProfile(Suscan::Source::Config const &config, bool restart = false);
     void setTimeStamp(struct timeval const &);
 

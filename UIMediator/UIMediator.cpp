@@ -1154,6 +1154,52 @@ UIMediator::refreshQthProperties()
 }
 
 void
+UIMediator::ensureWindowOnScreen()
+{
+  // Qt's geometry() is the client area, while Windows draws the frame (title bar
+  // and borders) outside of it. A restored geometry therefore ends up with the
+  // title bar above the top edge of the screen, where minimize / close cannot be
+  // reached. frameGeometry() is only correct once the platform window exists, so
+  // this is called again from a zero timer after show().
+  QRect rec = QGuiApplication::primaryScreen()->availableGeometry();
+
+  QMargins margins;
+  if (m_owner->windowHandle() != nullptr)
+    margins = m_owner->windowHandle()->frameMargins();
+  if (margins.isNull()) {
+    // Platform margins not known yet: fall back to what Qt already resolved.
+    QRect frame = m_owner->frameGeometry();
+    margins = QMargins(
+          m_owner->x() - frame.x(),
+          m_owner->y() - frame.y(),
+          frame.right()  - (m_owner->x() + m_owner->width()  - 1),
+          frame.bottom() - (m_owner->y() + m_owner->height() - 1));
+  }
+
+  int width  = qMin(m_owner->width(),  rec.width()  - margins.left() - margins.right());
+  int height = qMin(m_owner->height(), rec.height() - margins.top()  - margins.bottom());
+
+  if (width != m_owner->width() || height != m_owner->height())
+    m_owner->resize(width, height);
+
+  QRect frame(
+        m_owner->x() - margins.left(),
+        m_owner->y() - margins.top(),
+        m_owner->width()  + margins.left() + margins.right(),
+        m_owner->height() + margins.top()  + margins.bottom());
+
+  QPoint delta(0, 0);
+
+  if (frame.top()    < rec.top())    delta.ry() += rec.top()    - frame.top();
+  if (frame.left()   < rec.left())   delta.rx() += rec.left()   - frame.left();
+  if (frame.right()  > rec.right())  delta.rx() += rec.right()  - frame.right();
+  if (frame.bottom() > rec.bottom()) delta.ry() += rec.bottom() - frame.bottom();
+
+  if (!delta.isNull())
+    m_owner->move(m_owner->pos() + delta);
+}
+
+void
 UIMediator::applyConfig()
 {
   // Check if all plugin widgets have been loaded.
@@ -1164,21 +1210,31 @@ UIMediator::applyConfig()
   }
 
   // Apply window config
-  QRect rec = QGuiApplication::primaryScreen()->geometry();
+  //
+  // The saved geometry may come from a bigger screen, a different scale factor
+  // or a previous full screen session. Clamping it to the available area keeps
+  // the title bar on screen, which is the only way to reach minimize / close.
+  QRect rec = QGuiApplication::primaryScreen()->availableGeometry();
   unsigned int savedBw = m_appConfig->bandwidth;
   int savedLoFreq = m_appConfig->loFreq;
   auto sus = Suscan::Singleton::get_instance();
 
+  int width  = qMin(m_appConfig->width,  rec.width());
+  int height = qMin(m_appConfig->height, rec.height());
+
   if (m_appConfig->x == -1)
-    m_appConfig->x = (rec.width() - m_appConfig->width) / 2;
+    m_appConfig->x = rec.x() + (rec.width() - width) / 2;
   if (m_appConfig->y == -1)
-    m_appConfig->y = (rec.height() - m_appConfig->height) / 2;
+    m_appConfig->y = rec.y() + (rec.height() - height) / 2;
+
+  m_appConfig->x = qBound(rec.x(), m_appConfig->x, rec.x() + rec.width()  - width);
+  m_appConfig->y = qBound(rec.y(), m_appConfig->y, rec.y() + rec.height() - height);
 
   m_owner->setGeometry(
         m_appConfig->x,
         m_appConfig->y,
-        m_appConfig->width,
-        m_appConfig->height);
+        width,
+        height);
 
   if (m_appConfig->fullScreen)
     m_owner->setWindowState(

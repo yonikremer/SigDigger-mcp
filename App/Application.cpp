@@ -116,6 +116,13 @@ Application::run(Suscan::Object const &config)
 
   show();
 
+  // The window may have been restored outside the visible area (bigger screen,
+  // different scaling, previous full screen): keep the title bar reachable.
+  // The frame margins are only known once the platform window is up, hence the
+  // second pass from the event loop.
+  m_mediator->ensureWindowOnScreen();
+  QTimer::singleShot(0, m_mediator, &UIMediator::ensureWindowOnScreen);
+
   m_uiTimer.start(100);
   m_cfgTimer.start();
 
