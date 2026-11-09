@@ -1,6 +1,7 @@
 Makefile*
 debug/
 release/
+.winbuild/
 *.rc
 *.desktop
 object_script*
