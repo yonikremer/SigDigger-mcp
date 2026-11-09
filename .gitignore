@@ -1,11 +1,9 @@
-*.desktop
-*.rc
-.pi/
-.qmake.stash
-.winbuild/
-.winbuild/
-.worktrees/
 Makefile*
 debug/
-object_script*
 release/
+*.rc
+*.desktop
+object_script*
+.qmake.stash
+.winbuild/
+.pi/
