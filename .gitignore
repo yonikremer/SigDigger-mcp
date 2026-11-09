@@ -1,9 +1,10 @@
-Makefile*
-debug/
-release/
-*.rc
 *.desktop
-object_script*
+*.rc
+.clangd
+.pi/
 .qmake.stash
 .winbuild/
-.pi/
+Makefile*
+debug/
+object_script*
+release/
